@@ -65,6 +65,14 @@ Thumbs.db
 # ── Screenshots / temp test files ─────────────────────────────────────────────
 *-screenshot.png
 *-screenshot.jpg
+screenshot_*.png
+screenshot_*.jpg
+snap_*.png
+snap_*.jpg
+
+# ── Vite dev logs ──────────────────────────────────────────────────────────────
+vite-dev.log
+vite-*.log
 
 # ── Vite template boilerplate (not part of the project) ───────────────────────
 frontend/README.md
