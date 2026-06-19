@@ -1,0 +1,76 @@
+# ── Data files (too large / not for version control) ──────────────────────────
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.db
+*.sqlite
+
+# ── Credentials & secrets ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+.kaggle/
+kaggle.json
+service-account*.json
+*credentials*.json
+secrets/
+*.pem
+*.key
+
+# ── Planning / office docs ─────────────────────────────────────────────────────
+*.docx
+*.doc
+*.pptx
+*.pdf
+
+# ── Build artifacts ────────────────────────────────────────────────────────────
+frontend/dist/
+frontend/node_modules/
+node_modules/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── OS / editor ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Binaries ───────────────────────────────────────────────────────────────────
+*.exe
+*.dll
+*.so
+
+# ── Archives ───────────────────────────────────────────────────────────────────
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+
+# ── Screenshots / temp test files ─────────────────────────────────────────────
+*-screenshot.png
+*-screenshot.jpg
+
+# ── Vite template boilerplate (not part of the project) ───────────────────────
+frontend/README.md
+frontend/src/assets/react.svg
+frontend/src/assets/vite.svg
+frontend/src/assets/hero.png
+
+# ── Cloud build cache ─────────────────────────────────────────────────────────
+.gcloud/

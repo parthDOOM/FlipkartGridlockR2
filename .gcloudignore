@@ -1,0 +1,16 @@
+.git
+.gitignore
+frontend/node_modules
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+*.pyc
+*.pyo
+*.csv
+*.dump
+*.sql.gz
+*.zip
+*.docx
+logs/
+.vscode
+.idea

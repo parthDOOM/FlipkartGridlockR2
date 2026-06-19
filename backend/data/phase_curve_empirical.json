@@ -1,0 +1,25 @@
+{
+  "source": "kaggle_bangalore_traffic_pulse",
+  "dataset_rows": 8936,
+  "event_day_rows": 7407,
+  "baseline_day_rows": 1529,
+  "tti_uplift_ratio": 1.1759,
+  "congestion_uplift_ratio": 1.8123,
+  "phase_curve": {
+    "-2.0": 0.12,
+    "-1.0": 0.38,
+    "-0.5": 0.68,
+    "0.0": 1.0,
+    "1.0": 0.8,
+    "2.0": 0.55,
+    "3.0": 0.28,
+    "4.0": 0.09
+  },
+  "risk_thresholds": {
+    "critical": 70,
+    "high": 50,
+    "medium": 28,
+    "low": 0
+  },
+  "calibration_notes": "Phase curve derived from Travel Time Index ratio between event-day peak-hour and baseline observations in the Bangalore Traffic Pulse dataset (kaggle.com/datasets/preethamgouda/banglore-city-traffic-dataset). N=7407 event-day records, N=1529 baseline records."
+}

@@ -1,0 +1,85 @@
+# =============================================================================
+# Cloud Build — Gridlock Intelligence
+#
+# Triggered automatically on push to main, or manually:
+#   gcloud builds submit --config cloudbuild.yaml .
+#
+# Required substitution variables (set in Cloud Build trigger or --substitutions):
+#   _REGION          GCP region  (e.g. us-central1)
+#   _SERVICE_NAME    Cloud Run service name  (e.g. gridlock-intelligence)
+#   _DB_URL          Full DATABASE_URL secret reference or direct value
+# =============================================================================
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE_NAME: gridlock-intelligence
+  _REPO: gridlock
+
+steps:
+  # ── 1. Build the Docker image ─────────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}:$SHORT_SHA
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}:latest
+      - --cache-from
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}:latest
+      - --build-arg
+      - VITE_API_BASE_URL=
+      - .
+
+  # ── 2. Push to Artifact Registry ─────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}
+
+  # ── 3. Deploy to Cloud Run ────────────────────────────────────────────────
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}:$SHORT_SHA
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --memory
+      - 2Gi
+      - --cpu
+      - "2"
+      - --min-instances
+      - "0"
+      - --max-instances
+      - "3"
+      - --concurrency
+      - "80"
+      - --timeout
+      - "300"
+      - --set-env-vars
+      - DATABASE_URL=$$DB_URL
+    secretEnv:
+      - DB_URL
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/gridlock-db-url/versions/latest
+      env: DB_URL
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE_NAME}:latest
+
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY

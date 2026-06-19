@@ -1,0 +1,33 @@
+# Version control
+.git
+.gitignore
+
+# Node
+frontend/node_modules
+frontend/.env.local
+
+# Python
+backend/__pycache__
+backend/**/__pycache__
+backend/.pytest_cache
+backend/tests
+backend/*.egg-info
+**/*.pyc
+**/*.pyo
+
+# Large data files — do NOT bundle into the image
+# These are ingested separately via Cloud Storage + ingest_data.py
+*.csv
+*.dump
+*.sql.gz
+
+# Dev/local artifacts
+backend/data/
+logs/
+*.log
+*.zip
+*.docx
+
+# IDE
+.vscode
+.idea

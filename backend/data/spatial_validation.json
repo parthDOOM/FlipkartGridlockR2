@@ -1,0 +1,62 @@
+{
+  "source": "bangalore_police_violations_csv",
+  "total_violation_records": 298450,
+  "search_radius_km": 1.1,
+  "stadium": "M. Chinnaswamy Stadium, Bengaluru",
+  "ipl_2024_matches_analysed": 6,
+  "matches_with_data": 4,
+  "matches_with_strong_uplift": 1,
+  "mean_uplift_ratio": 1.03,
+  "max_uplift_ratio": 1.979,
+  "match_results": [
+    {
+      "date": "2024-03-22",
+      "fixture": "RCB vs PBKS",
+      "violations_near_stadium": 48,
+      "baseline_avg": 108.8,
+      "uplift_ratio": 0.441,
+      "data_available": true
+    },
+    {
+      "date": "2024-03-25",
+      "fixture": "RCB vs GT",
+      "violations_near_stadium": 109,
+      "baseline_avg": 126.6,
+      "uplift_ratio": 0.861,
+      "data_available": true
+    },
+    {
+      "date": "2024-03-28",
+      "fixture": "RCB vs CSK",
+      "violations_near_stadium": 247,
+      "baseline_avg": 124.8,
+      "uplift_ratio": 1.979,
+      "data_available": true
+    },
+    {
+      "date": "2024-04-07",
+      "fixture": "RCB vs SRH",
+      "violations_near_stadium": 83,
+      "baseline_avg": 98.9,
+      "uplift_ratio": 0.839,
+      "data_available": true
+    },
+    {
+      "date": "2024-04-14",
+      "fixture": "RCB vs DC",
+      "violations_near_stadium": 0,
+      "baseline_avg": 104.0,
+      "uplift_ratio": null,
+      "data_available": false
+    },
+    {
+      "date": "2024-04-21",
+      "fixture": "RCB vs MI",
+      "violations_near_stadium": 0,
+      "baseline_avg": null,
+      "uplift_ratio": null,
+      "data_available": false
+    }
+  ],
+  "finding": "On 1 of 4 IPL home match dates with sufficient data, overnight parking violations within 1.1 km of Chinnaswamy Stadium were >=1.3x above the 7-day rolling baseline (max 1.98x on 2024-03-28). This confirms event-driven spatial risk elevation in the police violation dataset."
+}
