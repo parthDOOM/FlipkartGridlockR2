@@ -2,36 +2,31 @@
 
 Event-driven congestion forecasting and patrol deployment for Bangalore traffic police.
 
-Live: `https://gridlock-intelligence-575035862586.us-central1.run.app`
+**Live demo:** `https://gridlock-intelligence-575035862586.us-central1.run.app`  
+**Repository:** `https://github.com/parthDOOM/FlipkartGridlockR2`
 
 ---
 
 ## Quickstart for evaluators
 
-Five things to try, in order:
+1. **Open the app** — Risk Zones tab loads automatically. 349 clusters, 2 patrol routes, derived from 85,918 real Bangalore violation records. First load ~8 s; cached after that.
 
-1. **Open the app** → Risk Zones tab loads automatically. 300 clusters, 2 patrol routes across 85,918 real Bangalore violation records.
+2. **Events tab → IPL Match: RCB vs MI** — click it. You get a predicted risk score, an 8-point hour-by-hour phase curve, officer/barricade counts, and diversion suggestions. The green badge means the phase curve came from the Kaggle Bangalore Traffic Pulse dataset, not hardcoded constants.
 
-2. **Events tab → IPL Match: RCB vs MI** → click it. You get a predicted risk score, an 8-point hour-by-hour forecast with the empirical phase curve, officer/barricade counts, and diversion suggestions. The green "Empirically derived" badge means this came from the Kaggle Bangalore Traffic Pulse dataset, not hardcoded constants.
+3. **Hit "Run Impact Simulation"** — synthetic violations are injected near the venue and patrol routing reruns. Watch the map clusters shift.
 
-3. **Hit "Run Impact Simulation"** → synthetic violations are injected near the match venue and the patrol routing reruns. Watch the map clusters shift.
+4. **Spike Detection panel** (Events tab, above the event list) — grid cells where enforcement density in the last 3 days exceeds the 21-day rolling baseline by ≥1.4×. Pass `?as_of=2024-03-28` to `/api/v1/live-incidents` to replay the RCB vs CSK match-night spike.
 
-4. **Spike detection** — already shown in the Events tab above the event list. These are grid cells where enforcement density in the last 3 days of the dataset exceeds the 21-day rolling baseline by 1.4×. No manual event creation needed.
+5. **System tab → switch Routing to OR-Tools VRP** → Apply & Recalculate. Both solvers (PuLP MILP, OR-Tools VRP) and both clustering engines (HDBSCAN, PostGIS ST_ClusterDBSCAN) are live.
 
-5. **System tab → change Routing to OR-Tools VRP** → Apply & Recalculate. Compare the route layout against PuLP. Both solvers, both clustering engines (HDBSCAN / PostGIS ST_ClusterDBSCAN) are wired and switchable.
-
-What's real: the 85,918 violation records, the phase curve calibration, the patrol routing math, the 1.98× spatial uplift validated on the RCB vs CSK match date (2024-03-28).
-What's synthetic: event attendance figures, the violations injected when you hit "Run Impact Simulation".
+**What's real:** 85,918 violation records, phase curve calibration, patrol routing math, 1.98× spatial uplift validated on the RCB vs CSK match date (2024-03-28).  
+**What's synthetic:** event attendance figures, violations injected when you hit "Run Impact Simulation".
 
 ---
 
 ## Problem
 
-Planned and unplanned events (cricket matches, concerts, protests, accidents) create
-predictable congestion spikes that traffic police currently respond to reactively.
-This tool flips the posture: given an event, tell the officer where violations will
-concentrate, by how much, when the peak hits, and exactly how many personnel and
-barricades to send where.
+Planned and unplanned events create predictable congestion spikes that traffic police currently respond to reactively. This tool flips the posture: given an event, tell the officer where violations will concentrate, by how much, when the peak hits, and exactly how many personnel and barricades to send where.
 
 | Requirement | What's built |
 |---|---|
@@ -78,8 +73,7 @@ flowchart TD
     forecast --> phasejson
 ```
 
-Single container: FastAPI serves `/api/v1/*` and the compiled React bundle from `StaticFiles`.
-No cross-origin complexity, no separate frontend host.
+Single container: FastAPI serves `/api/v1/*` and the compiled React bundle from `StaticFiles`. No cross-origin complexity, no separate frontend host.
 
 ---
 
@@ -87,7 +81,7 @@ No cross-origin complexity, no separate frontend host.
 
 ### Police Violation Records
 
-- Source: Bangalore police enforcement CSV (Jan–May)
+- Source: Bangalore police enforcement CSV (Jan–May 2024)
 - Raw: ~298,000 rows
 - Filtered: **85,918** peak-hour (08–10h, 17–19h IST) parking violations with valid coordinates
 - Table: `police_violations` with `GEOMETRY(Point, 4326)` PostGIS column
@@ -97,12 +91,11 @@ No cross-origin complexity, no separate frontend host.
 - [kaggle.com/datasets/preethamgouda/banglore-city-traffic-dataset](https://www.kaggle.com/datasets/preethamgouda/banglore-city-traffic-dataset)
 - 8,936 rows across Bangalore roads (2022+)
 - Used to calibrate the phase curve risk thresholds
-- Key numbers: baseline TTI = 1.201, high-activity TTI = 1.412 → **1.176× travel-time uplift**; congestion level **1.812×** on high-activity days
+- Key: baseline TTI = 1.201, high-activity TTI = 1.412 → **1.176× travel-time uplift**; congestion level **1.812×** on high-activity days
 
 ### IPL Spatial Validation
 
-Violation density within 1 km of M. Chinnaswamy Stadium on RCB 2024 home match nights
-vs the prior 7-day rolling average:
+Violation density within 1 km of M. Chinnaswamy Stadium on RCB 2024 home match nights vs the prior 7-day rolling average:
 
 | Date | Fixture | Match-night violations | 7-day baseline | Uplift |
 |---|---|---|---|---|
@@ -111,16 +104,11 @@ vs the prior 7-day rolling average:
 | **2024-03-28** | **RCB vs CSK** | **247** | **124.8** | **1.98×** |
 | 2024-04-07 | RCB vs SRH | 83 | 98.9 | 0.84× |
 
-The RCB vs CSK date shows **2× overnight parking violations** vs baseline.
-Timestamps are enforcement patrol logs (02–06h IST), so uplift is observed the
-morning after the match. Pass `as_of=2024-03-28` to the `/api/v1/live-incidents`
-endpoint to replay the auto-detection.
+The RCB vs CSK date shows **2× overnight parking violations** vs baseline. Timestamps are enforcement patrol logs (02–06h IST) — uplift is observed the morning after the match.
 
 ---
 
 ## Impact Score Formula
-
-Computed per spatial cluster from violation density:
 
 ```
 fp = (N_sat - 0.1 - 18 × Nm) / N_sat    # HCM parking adjustment
@@ -140,14 +128,9 @@ impact_score = clamp(hcm_score + erlang_score + vehicle_score, 0, 100)
 
 Vehicle severity: tankers/buses/lorries +50%, scooters −15%; clamped [0.85, 1.50].
 
-`PEAK_MANEUVER_CALIBRATION = 12.0`: each recorded violation proxies ~10 real events
-spread across 8 peak hours → ~1.25 effective maneuvers/peak-hour per violation/day.
-
 ---
 
 ## Event Impact Prediction
-
-When an event is created an `ImpactPrediction` is generated immediately:
 
 ```
 base    = event_type_weight × 15
@@ -184,8 +167,7 @@ Derived from Kaggle dataset (N=7,407 high-activity observations, N=1,529 baselin
 
 ### Risk Thresholds
 
-Thresholds are set above generic HCM defaults because Bangalore's baseline TTI is
-already 1.2 — the city is congested on a normal day:
+Thresholds are set above generic HCM defaults because Bangalore's baseline TTI is already 1.2 — the city is congested on a normal day:
 
 | Level | Threshold | vs HCM default |
 |---|---|---|
@@ -204,11 +186,7 @@ already 1.2 — the city is congested on a normal day:
 3. Compare to a baseline window (default: prior 21 days)
 4. Return cells where `recent_daily_rate / baseline_daily_rate ≥ min_uplift` (default 1.4×)
 
-The Events tab shows detected hotspots with their uplift ratio and auto-refreshes
-every 60 seconds.
-
-Demo mode: `?as_of=2024-03-28` reproduces the RCB vs CSK spike detection from the
-violation dataset.
+Demo mode: `?as_of=2024-03-28` reproduces the RCB vs CSK spike from the violation dataset.
 
 ---
 
@@ -216,13 +194,9 @@ violation dataset.
 
 Two solvers, switchable from the System tab:
 
-**PuLP MILP (default)**  
-MTZ subtour elimination. Falls back to greedy when `vehicles × N × (N+1) > 1200`.
-Configurable time limit (default 5 s).
+**PuLP MILP (default)** — MTZ subtour elimination. Falls back to greedy when `vehicles × N × (N+1) > 1200`. Default time limit 2 s.
 
-**OR-Tools VRP**  
-Google OR-Tools SCIP, first-solution heuristic + local search. Better for larger
-candidate sets where MILP is slow.
+**OR-Tools VRP** — Google OR-Tools SCIP, first-solution heuristic + local search. Better for larger candidate sets.
 
 Road geometry from OSRM; straight-line fallback when OSRM is unreachable.
 
@@ -230,12 +204,22 @@ Road geometry from OSRM; straight-line fallback when OSRM is unreachable.
 
 ## Clustering
 
-**HDBSCAN (default)** — density-based, adapts to variable urban density.
-`min_cluster_size=15`, `min_samples=5` (configurable). Hourly slice: thresholds
-auto-scaled to `max(3, min_cluster_size // 4)`.
+**HDBSCAN (default)** — density-based, adapts to variable urban density. Coordinates are pre-aggregated to a 0.0001° grid (~10 m) in SQL before clustering, reducing HDBSCAN input from 85k raw rows to ~10–15k unique spatial cells with no loss of cluster quality.
 
-**PostGIS ST_ClusterDBSCAN** — fixed `eps=35m` radius (EPSG:3857). Catches
-smaller junctions (8–10 violations) that HDBSCAN filters out.
+**PostGIS ST_ClusterDBSCAN** — fixed `eps=35m` radius (EPSG:3857). Catches smaller junctions that HDBSCAN filters out.
+
+---
+
+## Performance
+
+| Stage | Cold (no cache) | Warm (cached) |
+|---|---|---|
+| Spatial clustering | ~5.5 s | — |
+| Impact scoring | ~60 ms | — |
+| MILP routing | ~2.5 s | — |
+| **Total pipeline** | **~8–10 s** | **<2 s** |
+
+The pipeline result is cached for 30 minutes. A background warmup task runs at startup so the first visitor typically hits the cache.
 
 ---
 
@@ -267,7 +251,7 @@ smaller junctions (8–10 violations) that HDBSCAN filters out.
 | `max_stops` | 5 | 1–12 | Stops per vehicle |
 | `candidate_limit` | 18 | 3–30 | Top-N clusters for routing |
 | `distance_penalty` | 14.0 | 0–100 | Travel distance weight |
-| `solver_time_limit` | 5.0 | 1–15 | MILP time limit (s) |
+| `solver_time_limit` | 2.0 | 1–15 | MILP time limit (s) |
 | `time_hour` | null | 0–23 | Filter to a specific hour |
 | `clustering_engine` | `hdbscan` | `hdbscan`, `postgis` | Clustering algorithm |
 | `routing_engine` | `pulp` | `pulp`, `ortools` | Route optimizer |
@@ -288,7 +272,7 @@ smaller junctions (8–10 violations) that HDBSCAN filters out.
 
 | Component | Status |
 |---|---|
-| Violation dataset | Real — 85,918 peak-hour parking violations, Bangalore Jan–May |
+| Violation dataset | Real — 85,918 peak-hour parking violations, Bangalore Jan–May 2024 |
 | Phase curve calibration | Empirical — 8,936 rows, Kaggle Bangalore Traffic Pulse, 1.176× TTI uplift |
 | IPL spatial validation | Real — 1.98× uplift within 1 km of Chinnaswamy on 2024-03-28 |
 | Live incident detection | Real data, real algorithm — window/baseline comparison on the actual violation table |
@@ -328,7 +312,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-`VITE_API_BASE_URL` defaults to `http://localhost:8000`. In the Docker build it's set to `""`.
+`VITE_API_BASE_URL` defaults to `http://localhost:8000`. In the Docker build it is set to `""`.
 
 ---
 
@@ -336,53 +320,12 @@ npm run dev   # http://localhost:5173
 
 Cloud Run (single container) + Cloud SQL PostgreSQL 14 (public IP, Cloud SQL Auth Proxy).
 
-Requirements: `gcloud` authenticated, Docker Desktop, Cloud SDK 573.0.0+.
-`gcloud auth application-default login` is **not** required — the proxy uses `--gcloud-auth`.
-
 ```powershell
 gcloud config set project YOUR_PROJECT_ID
 .\deploy.ps1
 ```
 
-`deploy.ps1` handles, in order:
-
-1. Enable APIs (Cloud Run, Cloud SQL, Artifact Registry, Secret Manager, Storage)
-2. Create Artifact Registry repo
-3. Create Cloud SQL PostgreSQL 14 instance
-4. Create DB + user
-5. Write `DATABASE_URL` to Secret Manager (no-BOM UTF-8 via `[System.Text.UTF8Encoding]::new($false)`)
-6. Build multi-stage Docker image (Node 20 → React; Python 3.10 → FastAPI)
-7. Push to Artifact Registry
-8. Deploy to Cloud Run with Cloud SQL socket mount
-9. Start proxy with `--gcloud-auth`, create PostGIS extension, grant superuser
-10. Ingest violations through proxy
-11. Seed events
-
-### Manual ingestion (proxy already running)
-
-```powershell
-$env:DATABASE_URL = "postgresql://gridlock_user:PASS@localhost:5433/congestion_db"
-python backend\ingest_data.py
-Invoke-RestMethod -Uri "https://YOUR-URL/api/v1/seed-events" -Method POST
-```
-
----
-
-## Phase Curve Recalibration
-
-```bash
-kaggle datasets download preethamgouda/banglore-city-traffic-dataset --unzip
-
-python backend/calibrate_phase_curve.py \
-  --kaggle Banglore_traffic_Dataset.csv \
-  --violations "jan to may police violation_anonymized791b166.csv"
-
-# Rebuild + redeploy (JSON is baked into the image)
-.\deploy.ps1
-```
-
-The script handles datasets without a `Special Events` column by proxying
-high-activity rows as `Congestion Level > 70%` or `Incident Reports > 0`.
+`deploy.ps1` handles APIs, Artifact Registry, Cloud SQL instance, Secret Manager, Docker build, push, deploy, PostGIS extension, and data ingestion in sequence.
 
 ---
 
@@ -401,13 +344,12 @@ high-activity rows as `Congestion Level > 70%` or `Incident Reports > 0`.
 | Map | deck.gl + MapLibre GL + CARTO dark basemap |
 | Icons | Lucide React |
 | Container | Docker multi-stage (Node 20 Alpine + Python 3.10 slim-bullseye) |
-| Cloud | Cloud Run · Cloud SQL · Artifact Registry · Secret Manager · Cloud Storage |
+| Cloud | Cloud Run · Cloud SQL · Artifact Registry · Secret Manager |
 
 ---
 
 ## Limitations
 
-- No live feeds — no cameras, GPS, or sensor ingestion. Pre-event decision support.
+- No live feeds — no cameras, GPS, or sensor ingestion. Pre-event decision support only.
 - Single city — `DEFAULT_DEPOT` and road calibration are Bangalore-specific.
-- HDBSCAN `min_cluster_size=15` suppresses junctions with 8–14 violations; switch to PostGIS engine for finer granularity.
 - OSRM falls back to straight lines when the public API is unreachable.

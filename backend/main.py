@@ -39,23 +39,45 @@ def _db_init_sync():
     Base.metadata.create_all(bind=engine)
 
 
+def _warmup_cache():
+    """Run the default pipeline once at startup to populate the in-process cache."""
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            run_congestion_pipeline(
+                db,
+                min_cluster_size=15, min_samples=5,
+                patrol_vehicles=2, max_stops=5,
+                candidate_limit=18, distance_penalty=14.0,
+                map_cluster_limit=300, route_geometry="road",
+                solver_time_limit=2.0,
+            )
+            print("[startup] pipeline cache warmed")
+        finally:
+            db.close()
+    except Exception as exc:
+        print(f"[startup] warmup skipped: {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio
     try:
-        # Run blocking psycopg2 call in a thread so the event loop stays free
-        # for Cloud Run's HTTP health-check during startup.
         await asyncio.wait_for(
             asyncio.get_event_loop().run_in_executor(None, _db_init_sync),
             timeout=20.0,
         )
     except Exception as exc:
         print(f"[startup] DB init skipped: {exc}")
+    # Warm the pipeline cache in a background thread — first HTTP request
+    # hits the cache instead of waiting 20-30 s for clustering + routing.
+    asyncio.get_event_loop().run_in_executor(None, _warmup_cache)
     yield
 
 
 app = FastAPI(title="Parking-Induced Congestion Optimizer", version="3.0.0", lifespan=lifespan)
-PIPELINE_CACHE_TTL_SECONDS = 300
+PIPELINE_CACHE_TTL_SECONDS = 1800
 _PIPELINE_CACHE = {}
 
 _ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -383,7 +405,7 @@ def get_zones(
     distance_penalty: float = Query(default=14.0, ge=0.0, le=100.0),
     map_cluster_limit: int = Query(default=300, ge=50, le=1500),
     route_geometry: str = Query(default="road", pattern="^(road|straight)$"),
-    solver_time_limit: float = Query(default=5.0, ge=1.0, le=15.0),
+    solver_time_limit: float = Query(default=2.0, ge=1.0, le=15.0),
     time_hour: int = Query(default=None, ge=0, le=23),
     clustering_engine: str = Query(default="hdbscan", pattern="^(hdbscan|postgis)$"),
     routing_engine: str = Query(default="pulp", pattern="^(pulp|ortools)$"),
@@ -417,7 +439,7 @@ def simulate_anomaly(
     distance_penalty: float = Query(default=14.0, ge=0.0, le=100.0),
     map_cluster_limit: int = Query(default=300, ge=50, le=1500),
     route_geometry: str = Query(default="road", pattern="^(road|straight)$"),
-    solver_time_limit: float = Query(default=5.0, ge=1.0, le=15.0),
+    solver_time_limit: float = Query(default=2.0, ge=1.0, le=15.0),
     time_hour: int = Query(default=None, ge=0, le=23),
     clustering_engine: str = Query(default="hdbscan", pattern="^(hdbscan|postgis)$"),
     routing_engine: str = Query(default="pulp", pattern="^(pulp|ortools)$"),
@@ -517,7 +539,7 @@ def activate_event(
     distance_penalty: float = Query(default=14.0, ge=0.0, le=100.0),
     map_cluster_limit: int = Query(default=300, ge=50, le=1500),
     route_geometry: str = Query(default="road", pattern="^(road|straight)$"),
-    solver_time_limit: float = Query(default=5.0, ge=1.0, le=15.0),
+    solver_time_limit: float = Query(default=2.0, ge=1.0, le=15.0),
     routing_engine: str = Query(default="pulp", pattern="^(pulp|ortools)$"),
     db: Session = Depends(get_db),
 ):
