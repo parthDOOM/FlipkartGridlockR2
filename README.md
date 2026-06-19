@@ -6,6 +6,25 @@ Live: `https://gridlock-intelligence-575035862586.us-central1.run.app`
 
 ---
 
+## Quickstart for evaluators
+
+Five things to try, in order:
+
+1. **Open the app** → Risk Zones tab loads automatically. 300 clusters, 2 patrol routes across 85,918 real Bangalore violation records.
+
+2. **Events tab → IPL Match: RCB vs MI** → click it. You get a predicted risk score, an 8-point hour-by-hour forecast with the empirical phase curve, officer/barricade counts, and diversion suggestions. The green "Empirically derived" badge means this came from the Kaggle Bangalore Traffic Pulse dataset, not hardcoded constants.
+
+3. **Hit "Run Impact Simulation"** → synthetic violations are injected near the match venue and the patrol routing reruns. Watch the map clusters shift.
+
+4. **Spike detection** — already shown in the Events tab above the event list. These are grid cells where enforcement density in the last 3 days of the dataset exceeds the 21-day rolling baseline by 1.4×. No manual event creation needed.
+
+5. **System tab → change Routing to OR-Tools VRP** → Apply & Recalculate. Compare the route layout against PuLP. Both solvers, both clustering engines (HDBSCAN / PostGIS ST_ClusterDBSCAN) are wired and switchable.
+
+What's real: the 85,918 violation records, the phase curve calibration, the patrol routing math, the 1.98× spatial uplift validated on the RCB vs CSK match date (2024-03-28).
+What's synthetic: event attendance figures, the violations injected when you hit "Run Impact Simulation".
+
+---
+
 ## Problem
 
 Planned and unplanned events (cricket matches, concerts, protests, accidents) create

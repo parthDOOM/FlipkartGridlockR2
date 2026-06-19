@@ -266,7 +266,7 @@ const Sidebar = ({
           <Gauge size={22} />
           <div>
             <h1>Gridlock Intelligence</h1>
-            <p>Predict event-driven congestion. Recommend the right deployment.</p>
+            <p>Bangalore traffic ops · event congestion</p>
           </div>
         </div>
       </header>
@@ -313,7 +313,7 @@ const Sidebar = ({
             <section className="panel">
               <div className="panel-title">
                 <Navigation size={17} />
-                <h2>High-Risk Impact Zones</h2>
+                <h2>Violation Clusters</h2>
               </div>
               <div className="hotspot-list">
                 {topHotspots.map((cluster, index) => (
@@ -378,7 +378,7 @@ const Sidebar = ({
                   {dashboardSummary.imminent_events_2h.length > 0 && (
                     <><strong>{dashboardSummary.imminent_events_2h.length} imminent</strong> (≤2h){' '}</>
                   )}
-                  event{dashboardSummary.alert_count !== 1 ? 's' : ''} — ops required
+                  event{dashboardSummary.alert_count !== 1 ? 's' : ''} need attention
                 </span>
               </div>
             )}
@@ -387,12 +387,11 @@ const Sidebar = ({
               <section className="panel live-incidents-panel">
                 <div className="panel-title">
                   <Zap size={17} className="live-pulse" />
-                  <h2>Auto-detected Hotspots</h2>
+                  <h2>Spike Detection</h2>
                   <span className="panel-kpi live">{liveIncidents.total_detected} zones</span>
                 </div>
                 <p className="live-subtext">
-                  {liveIncidents.window_days}d window vs {liveIncidents.baseline_days}d baseline ·{' '}
-                  min uplift {liveIncidents.min_uplift}×
+                  last {liveIncidents.window_days}d vs prior {liveIncidents.baseline_days}d · threshold {liveIncidents.min_uplift}×
                 </p>
                 <div className="live-incident-list">
                   {liveIncidents.hotspots.slice(0, 5).map((h, i) => (
@@ -409,7 +408,7 @@ const Sidebar = ({
                   ))}
                 </div>
                 <p className="live-as-of">
-                  Scanned as of {liveIncidents.as_of ? new Date(liveIncidents.as_of).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                  as of {liveIncidents.as_of ? new Date(liveIncidents.as_of).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
                 </p>
               </section>
             )}
@@ -423,7 +422,7 @@ const Sidebar = ({
               <div className="event-list">
                 {events.length === 0 && (
                   <p className="hint-text" style={{ textAlign: 'left', padding: '8px 0' }}>
-                    No events seeded. Use System → Seed Sample Events.
+                    No events. Add from the System tab.
                   </p>
                 )}
                 {events.map(event => {
@@ -491,7 +490,7 @@ const Sidebar = ({
                     </div>
                     <span>{Math.round((eventDetails.prediction?.confidence_score ?? 0) * 100)}% Confidence</span>
                     <span style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
-                      {eventDetails.event?.is_planned ? 'Planned — higher certainty' : 'Unplanned — reactive estimate'}
+                      {eventDetails.event?.is_planned ? 'Planned event' : 'Unplanned incident'}
                       {eventDetails.event?.expected_attendance > 0 ? ` · ${(eventDetails.event.expected_attendance / 1000).toFixed(0)}k expected` : ''}
                     </span>
                   </div>
@@ -515,7 +514,7 @@ const Sidebar = ({
                 {/* Score breakdown */}
                 {eventDetails.prediction?.score_breakdown && (
                   <div className="score-breakdown">
-                    <h3>Impact Score Breakdown</h3>
+                    <h3>Score breakdown</h3>
                     {[
                       ['Event type', eventDetails.prediction.score_breakdown.event_type_base],
                       ['Severity', eventDetails.prediction.score_breakdown.severity_contribution],
@@ -552,7 +551,7 @@ const Sidebar = ({
                 {/* Diversion plan */}
                 {eventDetails.prediction?.recommendations?.suggested_diversions?.length > 0 && (
                   <div className="diversions-list">
-                    <h3>Diversion Plan</h3>
+                    <h3>Diversions</h3>
                     {eventDetails.prediction.recommendations.suggested_diversions.map((d, i) => (
                       <div key={i} className="diversion-item">
                         <ArrowUpRight size={14} />
@@ -574,13 +573,13 @@ const Sidebar = ({
                   </button>
                 </div>
                 <p className="hint-text" style={{ marginBottom: '8px' }}>
-                  Synthetic scenario — injects simulated congestion triggers for this event
+                  Injects synthetic violations near this event and reruns the pipeline
                 </p>
 
                 {/* Post-event feedback / learning */}
                 {!eventDetails.feedback ? (
                   <div className="feedback-section">
-                    <h3>Post-Event Feedback</h3>
+                    <h3>Record outcome</h3>
                     <div className="field">
                       <label>Actual Impact: {feedbackImpact}</label>
                       <input
@@ -648,7 +647,7 @@ const Sidebar = ({
               <section className="panel" style={{ padding: '10px 14px' }}>
                 <div className="panel-title" style={{ marginBottom: '6px' }}>
                   <BarChart3 size={14} />
-                  <h2 style={{ fontSize: '12px' }}>System Learning</h2>
+                  <h2 style={{ fontSize: '12px' }}>Learning</h2>
                 </div>
                 <div className="outcome-metrics" style={{ gap: '12px' }}>
                   <div>
@@ -680,7 +679,7 @@ const Sidebar = ({
             <section className="panel">
               <div className="panel-title">
                 <Clock size={17} />
-                <h2>Temporal Filter</h2>
+                <h2>Hour filter</h2>
               </div>
               <div className="time-slider-container">
                 <input
@@ -704,7 +703,7 @@ const Sidebar = ({
             <section className="panel">
               <div className="panel-title">
                 <Settings2 size={17} />
-                <h2>Deployment Parameters</h2>
+                <h2>Route settings</h2>
               </div>
               <div className="parameter-grid">
                 <ParameterInput label="Patrol Cars" value={localParams.patrol_vehicles} min={1} max={6} onChange={v => setLocalParams(p => ({ ...p, patrol_vehicles: v }))} />
@@ -751,10 +750,10 @@ const Sidebar = ({
             <section className="panel">
               <div className="panel-title">
                 <AlertTriangle size={17} />
-                <h2>Scenario Simulation</h2>
+                <h2>Scenario</h2>
               </div>
               <p className="hint-text" style={{ textAlign: 'left', margin: '0 0 8px' }}>
-                Synthetic what-if scenario — not live traffic data
+                Synthetic violations — not live sensor data
               </p>
 
               <div
@@ -763,7 +762,7 @@ const Sidebar = ({
                 title="Click to place a point on the map"
               >
                 <MapPin size={16} />
-                <span>{selectedPoint ? `${selectedPoint[1].toFixed(4)}, ${selectedPoint[0].toFixed(4)}` : 'Click to pin location on map'}</span>
+                <span>{selectedPoint ? `${selectedPoint[1].toFixed(4)}, ${selectedPoint[0].toFixed(4)}` : 'Click map to set location'}</span>
               </div>
 
               <div className="parameter-grid sim-matrix">
@@ -792,7 +791,7 @@ const Sidebar = ({
                 Inject Synthetic Incident
               </button>
               {!selectedPoint && (
-                <p className="hint-text">Pin a location on the map first</p>
+                <p className="hint-text">Select a location on the map first</p>
               )}
             </section>
 
@@ -805,9 +804,6 @@ const Sidebar = ({
                   <Play size={16} />
                   Demo: Tanker Spill Scenario
                 </button>
-               <p className="hint-text" style={{ textAlign: 'left', marginTop: '6px' }}>
-                 For event demos: Events tab → select IPL Match, Political Rally, or Marathon
-               </p>
             </section>
           </>
         )}
@@ -816,7 +812,7 @@ const Sidebar = ({
       <section className="panel data-note">
         <Car size={16} />
         <span>{totalClusters} impact zones · {events.length} events · Bangalore</span>
-        <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#475569' }}>heuristic baseline model</span>
+        <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#475569' }}>85,918 records · Jan–May 2024</span>
       </section>
     </aside>
   );

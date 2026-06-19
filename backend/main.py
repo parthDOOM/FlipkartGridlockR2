@@ -811,7 +811,11 @@ def live_incidents(
     from sqlalchemy import text as _text
     from datetime import timedelta
 
-    max_ts_row = db.execute(_text("SELECT MAX(created_datetime) FROM police_violations")).scalar()
+    # Exclude synthetic records created by simulate-anomaly (which use datetime.now()).
+    # Historical CSV data is Jan–May 2024; anything after 2025-01-01 is synthetic.
+    max_ts_row = db.execute(_text(
+        "SELECT MAX(created_datetime) FROM police_violations WHERE created_datetime < '2025-01-01'"
+    )).scalar()
     if not max_ts_row:
         return {"hotspots": [], "as_of": None, "total_detected": 0, "method": "no_data"}
 
