@@ -38,6 +38,7 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [demoActive, setDemoActive] = useState(false);
   const [eventForecast, setEventForecast] = useState(null);
+  const [eventLearning, setEventLearning] = useState(null);
   const [dashboardSummary, setDashboardSummary] = useState(null);
   const [liveIncidents, setLiveIncidents] = useState(null);
 
@@ -61,13 +62,16 @@ function App() {
   const fetchEventDetails = useCallback(async (id) => {
     if (!id) return;
     try {
-      const [detailRes, forecastRes] = await Promise.allSettled([
+      const [detailRes, forecastRes, learningRes] = await Promise.allSettled([
         axios.get(`${API_BASE_URL}/api/v1/events/${id}`),
         axios.get(`${API_BASE_URL}/api/v1/events/${id}/forecast`),
+        axios.get(`${API_BASE_URL}/api/v1/events/${id}/learning`),
       ]);
       if (detailRes.status === 'fulfilled') setEventDetails(detailRes.value.data);
       if (forecastRes.status === 'fulfilled') setEventForecast(forecastRes.value.data);
       else setEventForecast(null);
+      if (learningRes.status === 'fulfilled') setEventLearning(learningRes.value.data);
+      else setEventLearning(null);
     } catch (e) {
       console.error('Failed to fetch event details', e);
     }
@@ -97,6 +101,7 @@ function App() {
     } else {
       setEventDetails(null);
       setEventForecast(null);
+      setEventLearning(null);
     }
   }, [selectedEventId, fetchEventDetails]);
 
@@ -306,6 +311,7 @@ function App() {
         selectedEventType={selectedEventType}
         setSelectedEventType={setSelectedEventType}
         onSimulate={simulateAnomaly}
+        eventLearning={eventLearning}
         onFeedback={submitFeedback}
         onActivateEvent={activateEvent}
         onSeedEvents={seedEvents}

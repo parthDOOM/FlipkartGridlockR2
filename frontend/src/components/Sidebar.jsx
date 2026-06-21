@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Car,
   Clock,
+  Download,
   Gauge,
   MapPin,
   Navigation,
@@ -109,6 +110,9 @@ function ForecastTimeline({ forecast }) {
               </div>
               <span className="fp-score" style={{ color: pt.color }}>{pt.risk_score}</span>
               <span className="fp-label">{pt.label}</span>
+              {pt.timestamp && (
+                <span className="fp-time">{new Date(pt.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+              )}
             </div>
           );
         })}
@@ -215,6 +219,7 @@ const Sidebar = ({
   setSelectedEventId,
   eventDetails,
   eventForecast,
+  eventLearning,
   dashboardSummary,
   liveIncidents,
   parameters,
@@ -238,6 +243,7 @@ const Sidebar = ({
   const [activeTab, setActiveTab] = useState('hotspots');
   const [localTime, setLocalTime] = useState(parameters.time_hour === null ? -1 : parameters.time_hour);
   const [feedbackImpact, setFeedbackImpact] = useState(50);
+  const [observationNotes, setObservationNotes] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [localParams, setLocalParams] = useState({
     min_cluster_size: parameters.min_cluster_size,
@@ -336,6 +342,15 @@ const Sidebar = ({
                         <ArrowUpRight size={12} className="text-green" />
                         <span>Est. recovery: <b>{formatNumber(cluster.intervention_benefit?.recovery_metrics?.estimated_capacity_recovered_vph, 0)} vph</b></span>
                       </div>
+                      {(cluster.top_vehicle_type || cluster.heavy_vehicle_count > 0) && (
+                        <div className="hotspot-vehicle-meta">
+                          <Car size={11} />
+                          <span>{cluster.top_vehicle_type || 'mixed'}</span>
+                          {cluster.heavy_vehicle_count > 0 && (
+                            <span className="heavy-tag">{cluster.heavy_vehicle_count} heavy</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -588,13 +603,27 @@ const Sidebar = ({
                         onChange={(e) => setFeedbackImpact(Number(e.target.value))}
                       />
                     </div>
+                    <div className="field">
+                      <label style={{ marginBottom: '4px', display: 'block' }}>Observations (optional)</label>
+                      <textarea
+                        rows={2}
+                        placeholder="What differed from prediction? Road conditions, crowd behavior…"
+                        value={observationNotes}
+                        onChange={(e) => setObservationNotes(e.target.value)}
+                        style={{ width: '100%', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 8px', fontSize: '11px', resize: 'vertical', fontFamily: 'inherit' }}
+                      />
+                    </div>
                     <div className="button-row">
                       <button
                         className="btn primary full-width"
-                        onClick={() => onFeedback(selectedEventId, {
-                          actual_impact_score: feedbackImpact,
-                          actual_severity: feedbackImpact > 70 ? 'critical' : feedbackImpact > 40 ? 'high' : 'medium',
-                        })}
+                        onClick={() => {
+                          onFeedback(selectedEventId, {
+                            actual_impact_score: feedbackImpact,
+                            actual_severity: feedbackImpact > 70 ? 'critical' : feedbackImpact > 40 ? 'high' : 'medium',
+                            observation_notes: observationNotes || null,
+                          });
+                          setObservationNotes('');
+                        }}
                       >
                         Submit Outcome
                       </button>
@@ -603,13 +632,13 @@ const Sidebar = ({
                 ) : (
                   <LearningPanel learning={{
                     has_outcome: true,
-                    predicted_score: eventDetails.prediction?.impact_score,
+                    predicted_score: eventLearning?.predicted_score ?? eventDetails.prediction?.impact_score,
                     actual_score: eventDetails.feedback.actual_impact_score,
                     prediction_error: eventDetails.feedback.prediction_error,
                     effectiveness_score: eventDetails.feedback.effectiveness_score,
                     observation_notes: eventDetails.feedback.observation_notes,
-                    insight: null,
-                    peer_accuracy: { sample_size: 0 },
+                    insight: eventLearning?.insight ?? null,
+                    peer_accuracy: eventLearning?.peer_accuracy ?? { sample_size: 0 },
                   }} />
                 )}
               </section>
@@ -620,24 +649,87 @@ const Sidebar = ({
                 <button
                   className="btn secondary full-width"
                   onClick={() => {
-                    const payload = {
-                      event: eventDetails.event,
-                      prediction: eventDetails.prediction,
-                      forecast: eventForecast,
-                      feedback: eventDetails.feedback,
-                      exported_at: new Date().toISOString(),
-                    };
-                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                    const ev = eventDetails.event;
+                    const pred = eventDetails.prediction;
+                    const fc = eventForecast;
+                    const now = new Date();
+                    const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+                    const fmtDate = (iso) => iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+                    const sev = ev?.severity || 'medium';
+                    const sevColors = { critical: '#dc2626', high: '#ea580c', medium: '#ca8a04', low: '#16a34a' };
+                    const sevBg = { critical: '#fee2e2', high: '#ffedd5', medium: '#fef9c3', low: '#dcfce7' };
+
+                    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Deployment Order — ${ev?.title || 'Event'}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:24px 32px;max-width:800px}
+  h1{font-size:20px;margin-bottom:4px}
+  h2{font-size:14px;border-bottom:2px solid #333;padding-bottom:4px;margin:16px 0 8px}
+  .meta{color:#555;font-size:11px;margin-bottom:4px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th{background:#f3f4f6;text-align:left;padding:5px 8px;font-size:11px;border:1px solid #d1d5db}
+  td{padding:5px 8px;font-size:12px;border:1px solid #d1d5db}
+  .resources{display:flex;gap:24px;margin:8px 0}
+  .res{text-align:center}
+  .res .val{font-size:22px;font-weight:bold;display:block}
+  .res .lbl{font-size:10px;color:#555}
+  .footer{margin-top:24px;color:#777;font-size:10px;border-top:1px solid #e5e7eb;padding-top:8px}
+  ul{padding-left:20px}li{margin-bottom:2px}
+  @media print{body{padding:12px}}
+</style>
+</head>
+<body>
+  <div class="meta">GRIDLOCK INTELLIGENCE — DEPLOYMENT ORDER</div>
+  <h1>${ev?.title || 'Unknown Event'}</h1>
+  <div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span class="badge" style="background:${sevBg[sev]};color:${sevColors[sev]}">${sev.toUpperCase()}</span>
+    <span class="meta">${fmtDate(ev?.start_time)} → ${fmtDate(ev?.end_time)}</span>
+    ${ev?.road_closure_required ? '<span class="badge" style="background:#fee2e2;color:#dc2626">ROAD CLOSURE REQUIRED</span>' : ''}
+  </div>
+
+  <h2>Situation</h2>
+  <p>${ev?.description || '—'}</p>
+  <p style="margin-top:6px"><b>Expected attendance:</b> ${ev?.expected_attendance ? (ev.expected_attendance / 1000).toFixed(0) + 'k' : 'N/A'} &nbsp;|&nbsp; <b>Risk score:</b> ${pred?.impact_score?.toFixed(1) ?? '—'} / 100 &nbsp;|&nbsp; <b>Confidence:</b> ${pred?.confidence_score ? Math.round(pred.confidence_score * 100) + '%' : '—'}</p>
+
+  <h2>Peak Resource Requirements</h2>
+  <div class="resources">
+    <div class="res"><span class="val">${fc?.summary?.peak_manpower ?? pred?.recommendations?.manpower_count ?? '—'}</span><span class="lbl">Officers at peak</span></div>
+    <div class="res"><span class="val">${fc?.summary?.peak_barricades ?? pred?.recommendations?.barricade_count ?? '—'}</span><span class="lbl">Barricades at peak</span></div>
+    <div class="res"><span class="val">${fmtDate(fc?.summary?.pre_deploy_by)}</span><span class="lbl">Pre-deploy by</span></div>
+  </div>
+
+  <h2>Congestion Forecast</h2>
+  <table>
+    <tr><th>Window</th><th>Time</th><th>Risk Score</th><th>Level</th><th>Officers</th><th>Barricades</th><th>Action</th></tr>
+    ${(fc?.forecast_points || []).map(pt => `<tr>
+      <td>${pt.label}</td><td>${fmtTime(pt.timestamp)}</td><td>${pt.risk_score}</td>
+      <td><span class="badge" style="background:${sevBg[pt.congestion_level]||'#f3f4f6'};color:${sevColors[pt.congestion_level]||'#333'}">${(pt.congestion_level||'').toUpperCase()}</span></td>
+      <td>${pt.manpower_required}</td><td>${pt.barricades_count}</td>
+      <td style="font-size:10px">${pt.recommended_action}</td>
+    </tr>`).join('')}
+  </table>
+
+  ${pred?.recommendations?.suggested_diversions?.length > 0 ? `<h2>Diversion Plan</h2><ul>${pred.recommendations.suggested_diversions.map(d => `<li>${d}</li>`).join('')}</ul>` : ''}
+
+  <div class="footer">Generated by Gridlock Intelligence · ${now.toLocaleString('en-IN')} · Bangalore Traffic Operations</div>
+</body></html>`;
+
+                    const blob = new Blob([html], { type: 'text/html' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `gridlock-event-${selectedEventId.slice(0, 8)}.json`;
+                    a.download = `deployment-order-${(ev?.title || 'event').replace(/\s+/g, '-').toLowerCase().slice(0, 40)}.html`;
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
                 >
-                  <ArrowUpRight size={14} />
-                  Export Event Report (JSON)
+                  <Download size={14} />
+                  Export Deployment Order
                 </button>
               </div>
             )}

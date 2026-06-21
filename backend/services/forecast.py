@@ -43,7 +43,7 @@ _PHASE_CURVE = {
      4.0: 0.09,
 }
 
-_RISK_THRESHOLDS_DEFAULT = {"critical": 65, "high": 45, "medium": 25, "low": 0}
+_RISK_THRESHOLDS_DEFAULT = {"critical": 70, "high": 50, "medium": 28, "low": 0}
 _RISK_THRESHOLDS = dict(_RISK_THRESHOLDS_DEFAULT)
 
 # Spatial validation evidence (from police violation CSV)

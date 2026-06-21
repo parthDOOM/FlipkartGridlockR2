@@ -396,6 +396,8 @@ const MapComponent = ({ clusters, events = [], selectedEventId, eventDetails, ro
               <span>Capacity Loss</span><b>${tooltipNumber(object.intervention_benefit?.before?.capacity_loss_percent, 1)}%</b>
               <span>After Enforcement</span><b class="text-green">${tooltipNumber(object.intervention_benefit?.after?.capacity_loss_percent, 1)}%</b>
               <span>Throughput Gain</span><b class="text-blue">${tooltipNumber(recovery?.estimated_capacity_recovered_vph, 0)} vph</b>
+              <span>HCM f<sub>p</sub></span><b>${tooltipNumber(object.f_p, 3)}</b>
+              <span>Travel Time Index</span><b>${tooltipNumber(object.travel_time_index, 2)}×</b>
               <span>Violations</span><b>${object.raw_count || 0}</b>
               <span>Recommendation</span><b style="color: #fbbf24">${object.recommended_action || 'Monitoring'}</b>
             </div>
