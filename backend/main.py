@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Parking-Induced Congestion Optimizer", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="Gridlock Intelligence", version="3.0.0", lifespan=lifespan)
 PIPELINE_CACHE_TTL_SECONDS = 1800
 _PIPELINE_CACHE = {}
 

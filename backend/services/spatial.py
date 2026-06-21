@@ -26,15 +26,14 @@ def get_postgis_clusters(db: Session, eps_meters: float = 35.0, min_samples: int
     if time_hour is not None:
         time_filter = f"AND EXTRACT(HOUR FROM created_datetime) = {int(time_hour)}"
 
-    # Using 3857 for meter-based epsilon
     sql = text(f"""
         WITH clustered_points AS (
-            SELECT 
+            SELECT
                 id, latitude, longitude, vehicle_type, violation_type,
-                ST_ClusterDBSCAN(ST_Transform(geom, 3857), eps := :eps, minpoints := :min_samples) over () as cid
+                ST_ClusterDBSCAN(ST_Transform(geom, 3857), eps := :eps, minpoints := :min_samples) OVER () AS cid
             FROM police_violations
-            WHERE violation_type IN :active_violations
-              AND latitude BETWEEN -90 AND 90
+            WHERE violation_type IN ('WRONG PARKING', 'DOUBLE PARKING', 'NO PARKING')
+              AND latitude  BETWEEN -90  AND 90
               AND longitude BETWEEN -180 AND 180
               {time_filter}
         )
@@ -43,12 +42,8 @@ def get_postgis_clusters(db: Session, eps_meters: float = 35.0, min_samples: int
         WHERE cid IS NOT NULL
         ORDER BY cid;
     """)
-    
-    result = db.execute(sql, {
-        "eps": eps_meters, 
-        "min_samples": min_samples, 
-        "active_violations": ACTIVE_PARKING_VIOLATIONS
-    }).all()
+
+    result = db.execute(sql, {"eps": eps_meters, "min_samples": min_samples}).all()
     
     if not result:
         return []

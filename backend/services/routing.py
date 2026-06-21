@@ -86,7 +86,7 @@ def _fetch_osrm_route(point_key):
         }
     )
     url = f"{OSRM_BASE_URL}/route/v1/driving/{coordinates}?{query}"
-    request = Request(url, headers={"User-Agent": "parking-congestion-optimizer/2.1"})
+    request = Request(url, headers={"User-Agent": "gridlock-intelligence/3.0"})
 
     with urlopen(request, timeout=ROUTE_REQUEST_TIMEOUT_SECONDS) as response:
         payload = json.loads(response.read().decode("utf-8"))
