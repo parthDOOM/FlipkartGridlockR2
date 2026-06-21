@@ -885,7 +885,7 @@ button {
   grid-template-columns: repeat(8, 1fr);
   gap: 4px;
   align-items: flex-end;
-  height: 72px;
+  height: 84px;
 }
 
 .forecast-point {

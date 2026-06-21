@@ -11,7 +11,7 @@ Event-driven congestion forecasting and patrol deployment for Bangalore traffic 
 
 1. **Open the app** — Risk Zones tab loads automatically. 349 clusters, 2 patrol routes, derived from 85,918 real Bangalore violation records. First load ~8 s; cached after that.
 
-2. **Events tab → IPL Match: RCB vs MI** — click it. You get a predicted risk score, an 8-point hour-by-hour phase curve, officer/barricade counts, and diversion suggestions. The green badge means the phase curve came from the Kaggle Bangalore Traffic Pulse dataset, not hardcoded constants.
+2. **Events tab → IPL Match: RCB vs MI** — click it. You get a predicted risk score, an 8-point hour-by-hour phase curve with wall-clock times on each bar, officer/barricade counts, and diversion suggestions. The green badge means the phase curve came from the Kaggle Bangalore Traffic Pulse dataset. Click **Export Deployment Order** to download a printable HTML briefing with the full forecast table and resource plan.
 
 3. **Hit "Run Impact Simulation"** — synthetic violations are injected near the venue and patrol routing reruns. Watch the map clusters shift.
 
@@ -31,11 +31,13 @@ Planned and unplanned events create predictable congestion spikes that traffic p
 | Requirement | What's built |
 |---|---|
 | Predict congestion from a planned event | 4-factor impact score: type weight × severity × log(attendance) + road closure penalty |
-| Forecast hour-by-hour timeline | 8-point phase curve (T−2h → T+4h), calibrated from Kaggle Bangalore Traffic Pulse |
+| Forecast hour-by-hour timeline | 8-point phase curve (T−2h → T+4h) with wall-clock timestamps, calibrated from Kaggle Bangalore Traffic Pulse |
 | Detect unplanned spikes automatically | Spatial anomaly scan: 0.01° grid cells, recent vs rolling baseline, configurable uplift threshold |
 | Inject unplanned incidents | Synthetic violation insertion at any map coordinate via Scenario Simulation |
 | Patrol routing | MILP (PuLP/CBC) or OR-Tools VRP; OSRM road-geometry routes |
-| Learn from outcomes | `EventFeedback` stores actual vs predicted impact; effectiveness score; peer-event accuracy |
+| Learn from outcomes | `EventFeedback` stores actual vs predicted impact; effectiveness score; peer-event accuracy; `observation_notes`; auto-generated insight text |
+| Export Deployment Order | One-click printable HTML briefing: forecast table, resource counts, diversion plan |
+| Cluster capacity metrics | Map tooltip shows HCM f_p (parking adjustment factor) and Travel Time Index; hotspot list shows dominant vehicle type and heavy-vehicle count |
 | Real spatial data | 85,918 peak-hour Bangalore parking violation records in PostGIS |
 
 ---
@@ -236,7 +238,7 @@ The pipeline result is cached for 30 minutes. A background warmup task runs at s
 | GET | `/api/v1/events/{id}` | Event detail |
 | POST | `/api/v1/events/{id}/activate` | Inject violations, run pipeline |
 | GET | `/api/v1/events/{id}/forecast` | Phase curve timeline (8 horizons) |
-| POST | `/api/v1/events/{id}/feedback` | Submit post-event outcome |
+| POST | `/api/v1/events/{id}/feedback` | Submit post-event outcome (`actual_impact_score`, `actual_severity`, `observation_notes`) |
 | GET | `/api/v1/events/{id}/learning` | Predicted vs actual + peer accuracy |
 | GET | `/api/v1/dashboard-summary` | Active events, learning stats |
 | POST | `/api/v1/seed-events` | Re-seed 9 sample events |
